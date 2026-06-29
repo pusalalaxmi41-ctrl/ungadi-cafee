@@ -1,0 +1,97 @@
+name: Import UGAADI CAFE site
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  import-site:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download website files
+        env:
+          SITE_BASE: https://emotions-proxy-complement-cancer.trycloudflare.com
+        run: |
+          set -euo pipefail
+          files=(
+            ".gitignore"
+            "DEPLOYMENT_CHECKLIST.md"
+            "README.md"
+            "index.html"
+            "package.json"
+            "script.js"
+            "server.mjs"
+            "start-demo.ps1"
+            "styles.css"
+            "scripts/build.mjs"
+            "assets/images/apricot-delight.png"
+            "assets/images/bonda.png"
+            "assets/images/breakfast-plates.png"
+            "assets/images/chilli-parotta.png"
+            "assets/images/coffee-straw.png"
+            "assets/images/curd-rice.png"
+            "assets/images/dosa-table.png"
+            "assets/images/exterior-day.png"
+            "assets/images/exterior-night.png"
+            "assets/images/family-dosa.png"
+            "assets/images/filter-coffee-premium.png"
+            "assets/images/filter-coffee-real.png"
+            "assets/images/ghee.png"
+            "assets/images/ghee-podi-idly.png"
+            "assets/images/ghee-podi-masala-dosa.png"
+            "assets/images/google-info.png"
+            "assets/images/google-review-1.png"
+            "assets/images/google-review-2.png"
+            "assets/images/interior-peacock.png"
+            "assets/images/menu-dosa.png"
+            "assets/images/menu-rice-thali.png"
+            "assets/images/menu-sweets-beverages.png"
+            "assets/images/pongal-pappad.png"
+            "assets/images/pongal-plate.png"
+            "assets/images/pot-junnu.png"
+            "assets/images/ragi-idly.png"
+            "assets/images/sambar-idly.png"
+            "assets/images/schezwan-fried-rice.png"
+            "assets/images/spice-caddy.png"
+            "assets/images/upma-dosa.png"
+            "assets/video/ugaadi-hero-1.mp4"
+            "assets/video/ugaadi-hero-2.mp4"
+            "assets/video/ugaadi-hero-3.mp4"
+          )
+
+          for file in "${files[@]}"; do
+            mkdir -p "$(dirname "$file")"
+            curl --fail --location --retry 3 --retry-delay 2 "$SITE_BASE/$file" --output "$file"
+          done
+
+          rm -f .codex-write-test.txt
+          rm -rf dist node_modules
+
+      - name: Verify build
+        run: |
+          node --check script.js
+          node --check server.mjs
+          node --check scripts/build.mjs
+          npm run build
+          test -f dist/index.html
+          test -f dist/assets/video/ugaadi-hero-3.mp4
+
+      - name: Commit imported site
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .
+          git status --short
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Prepare restaurant website for Hostinger deployment"
+            git push
+          fi
